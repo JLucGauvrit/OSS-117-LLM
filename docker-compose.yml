@@ -8,5 +8,61 @@ services:
     volumes:
       - ./raw_data:/app/raw_data
       - ./scripts:/app/scripts
+    working_dir: /app
+    command: python scripts/collect_data.py
     restart: unless-stopped
 
+  # Prometheus pour la collecte des métriques
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: oss117_prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  # Node Exporter pour les métriques système (CPU, RAM, disque, réseau)
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: oss117_node_exporter
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+
+  # cAdvisor pour les métriques de conteneurs Docker
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: oss117_cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  # Grafana pour la visualisation
+  grafana:
+    image: grafana/grafana:latest
+    container_name: oss117_grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus_data:
+  grafana_data:
