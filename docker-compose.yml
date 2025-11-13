@@ -1,0 +1,12 @@
+#version: '3.8'
+
+services:
+  # Service de collecte de données
+  data_collector:
+    image: python:3.11-slim
+    container_name: oss117_data_collector
+    volumes:
+      - ./raw_data:/app/raw_data
+      - ./scripts:/app/scripts
+    restart: unless-stopped
+
