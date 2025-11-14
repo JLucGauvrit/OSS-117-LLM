@@ -31,10 +31,8 @@ jobs:
 
       - name: Generate API docs dynamically
         run: |
-              find . -type f -name "__init__.py" -print0 | while IFS= read -r -d '' f; do
-                  sphinx-apidoc -o docs/ "$(dirname "$f")"
-              done
-              sphinx-build -b html docs/ docs/_build/html
+              sphinx-apidoc -o documentations/docs data/ training/ --force --separate
+              sphinx-build -b html documentations/docs/ documentations/docs/_build/html
   
   deploy:
       needs: build
