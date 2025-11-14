@@ -3,13 +3,11 @@
 services:
   # Service de collecte de données
   data_collector:
-    image: python:3.11-slim
+    build:
+      context: ./data/collect_data
     container_name: oss117_data_collector
     volumes:
       - ./raw_data:/app/raw_data
-      - ./scripts:/app/scripts
-    working_dir: /app
-    command: python scripts/collect_data.py
     restart: unless-stopped
 
   # Prometheus pour la collecte des métriques
