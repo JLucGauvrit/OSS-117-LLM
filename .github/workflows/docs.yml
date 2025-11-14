@@ -1,0 +1,40 @@
+name: Build and Deploy Documentation
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install sphinx sphinx-rtd-theme sphinx-autobuild
+          pip install -e .
+
+      - name: Generate API docs dynamically
+        run: |
+          sphinx-apidoc -o docs/ your_module/
+          sphinx-build -b html docs docs_build_html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          publish_dir: docs_build_html
+          github_token: ${{ secrets.GITHUB_TOKEN }}
