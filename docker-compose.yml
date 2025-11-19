@@ -8,7 +8,14 @@ services:
     container_name: oss117_data_collector
     volumes:
       - ./raw_data:/app/raw_data
-    restart: unless-stopped
+    restart: on-failure
+    develop:
+      watch:
+        - path: ./data/collect_data
+          target: /app
+          action: sync+restart
+    networks:
+      - monitoring_network
 
   # Prometheus pour la collecte des métriques
   prometheus:
@@ -23,6 +30,8 @@ services:
     ports:
       - "9090:9090"
     restart: unless-stopped
+    networks:
+      - monitoring_network
 
   # Node Exporter pour les métriques système (CPU, RAM, disque, réseau)
   node_exporter:
@@ -31,19 +40,29 @@ services:
     ports:
       - "9100:9100"
     restart: unless-stopped
+    networks:
+      - monitoring_network
 
   # cAdvisor pour les métriques de conteneurs Docker
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: oss117_cadvisor
+    command: 
+      - --docker_only=true
+      - --store_container_labels=false
+      - --whitelisted_container_labels=io.kubernetes.pod.namespace,io.kubernetes.pod.name,io.kubernetes.container.name
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk/:ro
     ports:
       - "8080:8080"
     restart: unless-stopped
+    privileged: true
+    networks:
+      - monitoring_network
 
   # Grafana pour la visualisation
   grafana:
@@ -61,25 +80,28 @@ services:
     restart: unless-stopped
     depends_on:
       - prometheus
+    networks:
+      - monitoring_network
 
   dcgm-exporter:
     image: nvidia/dcgm-exporter:latest
     container_name: dcgm_exporter
     runtime: nvidia
+    privileged: true
+    volumes:
+      - /sys:/sys:ro
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
     ports:
       - "9400:9400"
     restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
-    command: ["--cap-add=SYS_ADMIN"]
-
-
+    networks:
+      - monitoring_network
 
 volumes:
   prometheus_data:
   grafana_data:
+
+networks:
+  monitoring_network:
+    driver: bridge
